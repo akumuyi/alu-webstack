@@ -2,9 +2,9 @@
 # Displays information about subdomains.
 # Function to display information about a subdomain
 display_info() {
-    local subdomain="$2"
-    local record_type="$3"
-    local destination="$4"
+    local subdomain="$1"
+    local record_type="$2"
+    local destination="$3"
     echo "The subdomain $subdomain is a $record_type record and points to $destination"
 }
 
@@ -23,13 +23,27 @@ audit_subdomains() {
 
     # Iterate through subdomains
     for sub in "${subdomains[@]}"; do
-    # Use awk to extract information from DNS lookup
-    result=$(nslookup "$sub.$domain" | awk '/^Name:/{name=$2} /^Address:/{address=$2} END{print name " " address}')
-    if [[ -n "$result" ]]; then
-        subdomain_name=$(echo "$result" | awk '{print $1}' | cut -d'.' -f1)  # Extract only the subdomain name
-        subdomain_ip=$(echo "$result" | awk '{print $2}')
-        display_info "$subdomain_name" "A" "$subdomain_ip"
-    else
-        echo "No information found for $sub.$domain"
-    fi
-done
+        # Use awk to extract information from DNS lookup
+        result=$(nslookup "$sub.$domain" | awk '/^Name:/{name=$2} /^Address:/{address=$2} END{print name " " address}')
+        if [[ -n "$result" ]]; then
+            subdomain_name=$(echo "$sub" | cut -d'.' -f1)  # Extract only the subdomain name
+            subdomain_ip=$(echo "$result" | awk '{print $2}')
+            display_info "$subdomain_name" "A" "$subdomain_ip"
+        else
+            echo "No information found for $sub.$domain"
+        fi
+    done
+}
+
+# Main script logic
+if [ "$#" -eq 1 ]; then
+    # When only the domain parameter is provided, audit default subdomains
+    audit_subdomains "$1"
+elif [ "$#" -eq 2 ]; then
+    # When both domain and subdomain parameters are provided, audit the specified subdomain
+    audit_subdomains "$1" "$2"
+else
+    echo "Usage: $0 <domain> [subdomain]"
+    exit 1
+fi
+
